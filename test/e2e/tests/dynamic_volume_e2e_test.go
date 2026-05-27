@@ -55,11 +55,25 @@ var _ = Describe("GCE PD CSI Driver Dynamic Volumes", func() {
 		}
 
 		// Step 1: Create volume via CSI RPC
+		// Preferred topology explicitly includes hyperdisk-balanced disk-type label so the
+		// test behaves consistently on both GKE and OSS clusters — not relying on GKE's
+		// node labeler or driver defaults to determine disk type.
 		volume, err := client.CreateVolume(volName, params, defaultHdBSizeGb,
 			&csi.TopologyRequirement{
 				Requisite: []*csi.Topology{
 					{
-						Segments: map[string]string{"topology.gke.io/zone": z},
+						Segments: map[string]string{
+							"topology.gke.io/zone": z,
+						},
+					},
+				},
+				Preferred: []*csi.Topology{
+					{
+						Segments: map[string]string{
+							"topology.gke.io/zone":                        z,
+							common.DiskTypeLabelKey("hyperdisk-balanced"): "true",
+							common.DiskTypeLabelKey("pd-balanced"):        "true",
+						},
 					},
 				},
 			}, nil)
